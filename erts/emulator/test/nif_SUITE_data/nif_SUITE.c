@@ -41,7 +41,18 @@ typedef struct
     CallInfo* call_history;
     NifModPrivData* nif_mod;
     union { ErlNifResourceType* t; long l; } rt_arr[2];
-}PrivData;
+} PrivData;
+
+/*
+ * Use a union for pointer type conversion to avoid compiler warnings
+ * about strict-aliasing violations with gcc-4.1. gcc >= 4.2 does not
+ * emit the warning.
+ * TODO: Reconsider use of union once gcc-4.1 is obsolete?
+ */
+typedef union {
+    void* vp;
+    struct make_term_info* p;
+} mti_t;
 
 void add_call(ErlNifEnv* env, PrivData* data, const char* func_name)
 {
@@ -1269,10 +1280,7 @@ static void msgenv_dtor(ErlNifEnv* env, void* obj)
 
 static ERL_NIF_TERM clear_msgenv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union {
-	void* vp;
-	struct make_term_info* p;
-    }mti;
+    mti_t mti;
     if (!enif_get_resource(env, argv[0], msgenv_resource_type, &mti.vp)) {
 	return enif_make_badarg(env);
     }
@@ -1285,7 +1293,7 @@ static ERL_NIF_TERM clear_msgenv(ErlNifEnv* env, int argc, const ERL_NIF_TERM ar
 
 static ERL_NIF_TERM grow_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     ERL_NIF_TERM term;
     if (!enif_get_resource(env, argv[0], msgenv_resource_type, &mti.vp)
 	|| (argc>2 && !enif_get_uint(env,argv[2], &mti.p->n))) {
@@ -1301,7 +1309,7 @@ static ERL_NIF_TERM grow_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 
 static ERL_NIF_TERM send_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     ErlNifPid to;
     ERL_NIF_TERM copy;
     int res;
@@ -1316,7 +1324,7 @@ static ERL_NIF_TERM send_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
 
 static ERL_NIF_TERM send3_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     ErlNifPid to;
     ERL_NIF_TERM copy;
     int res;
@@ -1349,7 +1357,7 @@ void* threaded_sender(void *arg)
 
 static ERL_NIF_TERM send_blob_thread(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     ERL_NIF_TERM copy;
     if (!enif_get_resource(env, argv[0], msgenv_resource_type, &mti.vp)
 	|| !enif_get_local_pid(env,argv[1], &mti.p->to_pid)) {
@@ -1375,7 +1383,7 @@ static ERL_NIF_TERM send_blob_thread(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
 static ERL_NIF_TERM join_send_thread(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     int err;
     if (!enif_get_resource(env, argv[0], msgenv_resource_type, &mti.vp)) {
 	return enif_make_badarg(env);
@@ -1392,7 +1400,7 @@ static ERL_NIF_TERM join_send_thread(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
 static ERL_NIF_TERM copy_blob(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    union { void* vp; struct make_term_info* p; }mti;
+    mti_t mti;
     if (!enif_get_resource(env, argv[0], msgenv_resource_type, &mti.vp)) {
 	return enif_make_badarg(env);
     }

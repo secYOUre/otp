@@ -133,12 +133,15 @@
 %%% Interface to erl_compile.
 
 compile(Input0, Output0, 
-        #options{warning = WarnLevel, verbose=Verbose, includes=Includes}) ->
+        #options{warning = WarnLevel, verbose=Verbose, includes=Includes,
+		 specific=Specific}) ->
     Input = shorten_filename(Input0),
     Output = shorten_filename(Output0),
     Includefile = lists:sublist(Includes, 1),
+    Werr = proplists:get_bool(warnings_as_errors, Specific),
     Opts = [{parserfile,Output}, {includefile,Includefile}, {verbose,Verbose},
-            {report_errors, true}, {report_warnings, WarnLevel > 0}],
+            {report_errors, true}, {report_warnings, WarnLevel > 0},
+	    {warnings_as_errors, Werr}],
     case file(Input, Opts) of
         {ok, _OutFile} ->
             ok;
@@ -849,14 +852,22 @@ report_errors(St) ->
     end.
 
 report_warnings(St) ->
-    case member(report_warnings, St#yecc.options) of
+    Werr = member(warnings_as_errors, St#yecc.options),
+    Prefix = case Werr of
+		 true -> "";
+		 false -> "Warning: "
+	     end,
+    ReportWerr = Werr andalso member(report_errors, St#yecc.options),
+    case member(report_warnings, St#yecc.options) orelse ReportWerr of
         true ->
             foreach(fun({File,{none,Mod,W}}) -> 
-                            io:fwrite(<<"~s: Warning: ~s\n">>, 
-                                      [File,Mod:format_error(W)]);
+                            io:fwrite(<<"~s: ~s~s\n">>,
+                                      [File,Prefix,
+				       Mod:format_error(W)]);
                        ({File,{Line,Mod,W}}) -> 
-                            io:fwrite(<<"~s:~w: Warning: ~s\n">>, 
-                                      [File,Line,Mod:format_error(W)])
+                            io:fwrite(<<"~s:~w: ~s~s\n">>,
+                                      [File,Line,Prefix,
+				       Mod:format_error(W)])
                     end, sort(St#yecc.warnings));
         false -> 
             ok

@@ -405,6 +405,8 @@ escape_uri([C | Cs]) ->
 escape_uri([]) ->
     [].
 
+escape_byte(C) when C =< 9 ->
+    "%0" ++ hex_octet(C);
 escape_byte(C) ->
     "%" ++ hex_octet(C).
 

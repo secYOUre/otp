@@ -406,7 +406,7 @@ escape_uri([]) ->
     [].
 
 escape_byte(C) ->
-    "%" ++ hex_octet(C).
+    "%" ++ string:right(hex_octet(C), 2, $0).
 
 % utf8([C | Cs]) when C > 16#7f ->
 %     [((C band 16#c0) bsr 6) + 16#c0, C band 16#3f ++ 16#80 | utf8(Cs)];
